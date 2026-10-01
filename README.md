@@ -118,13 +118,14 @@ qwerty/
 2. **도메인 연결**: 정해지면 연결
 3. **기기 간 데이터 공유**: 폰·PC에서 같은 매물 보기 (DB 연결 필요, 로그인 포함)
 4. **엑셀 일괄 불러오기**: 기존 시트 한 번에 옮기기
-5. **링크 미리보기 이미지**: 카톡 공유 시 가로형 로고 노출
+5. **공유 주소 확정**: 배포 URL이 정해지면 `og:image`와 `twitter:image`를 `https://서비스주소/assets/qwerty-og.png` 절대 주소로 설정하고 실제 카톡 미리보기 확인
 
 ## 아이콘
 
 - 브라우저 탭: `assets/qwerty-icon.svg`, PNG 호환용 `assets/favicon-32.png`
 - 아이폰 홈 화면: `assets/apple-touch-icon.png` (180px)
 - 512px 심볼: `assets/icon-512.png`
+- OG 공유 이미지: `assets/qwerty-og.png` (1200×630px). 원본 로고 비율을 유지하고 위아래 검정 여백을 추가함. 이미지·제목·설명 OG 및 Twitter 메타 태그 포함. 배포 주소 확정 전에는 이미지 경로가 상대 경로임.
 
 ## 검증
 
