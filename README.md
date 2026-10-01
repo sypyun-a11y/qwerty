@@ -114,18 +114,18 @@ qwerty/
 
 ## 다음 할 일
 
-1. **배포**: Vercel/Netlify에 폴더 전체 올리기 (심볼 탭 아이콘 연결 완료, `assets/`도 함께 배포)
+1. **현재 배포 주소**: https://qwerty-gilt-rho.vercel.app/ (개인 Vercel 프로젝트 `qwerty`, GitHub `main` 연동)
 2. **도메인 연결**: 정해지면 연결
 3. **기기 간 데이터 공유**: 폰·PC에서 같은 매물 보기 (DB 연결 필요, 로그인 포함)
 4. **엑셀 일괄 불러오기**: 기존 시트 한 번에 옮기기
-5. **공유 주소 확정**: 배포 URL이 정해지면 `og:image`와 `twitter:image`를 `https://서비스주소/assets/qwerty-og.png` 절대 주소로 설정하고 실제 카톡 미리보기 확인
+5. **카톡 미리보기 확인**: OG 이미지 주소는 `https://qwerty-gilt-rho.vercel.app/assets/qwerty-og.png`로 연결됨. 기존 카톡 미리보기는 캐시 때문에 이전 이미지가 표시될 수 있음.
 
 ## 아이콘
 
 - 브라우저 탭: `assets/qwerty-icon.svg`, PNG 호환용 `assets/favicon-32.png`
 - 아이폰 홈 화면: `assets/apple-touch-icon.png` (180px)
 - 512px 심볼: `assets/icon-512.png`
-- OG 공유 이미지: `assets/qwerty-og.png` (1200×630px). 원본 로고 비율을 유지하고 위아래 검정 여백을 추가함. 이미지·제목·설명 OG 및 Twitter 메타 태그 포함. 배포 주소 확정 전에는 이미지 경로가 상대 경로임.
+- OG 공유 이미지: `assets/qwerty-og.png` (1200×630px). 원본 로고 비율을 유지하고 위아래 검정 여백을 추가함. 이미지·제목·설명 OG 및 Twitter 메타 태그 포함. 실제 배포 주소 기준 절대 URL로 연결됨.
 
 ## 검증
 

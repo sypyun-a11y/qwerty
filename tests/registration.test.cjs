@@ -51,6 +51,25 @@ test('memo edits begin persistence immediately, before any render debounce', () 
   assert.equal(written.length, 1, 'Persistence must not wait for a timer');
   assert.equal(written[0].body, '마지막 입력');
 });
+test('calendar memo composer and saved events give memo a readable dedicated area', () => {
+  const start = html.indexOf('function renderDay(){');
+  const end = html.indexOf("$('#calPrev')", start);
+  const dayPanel = { innerHTML:'', querySelectorAll:()=>[] };
+  const form = { querySelector: () => ({value:'매물소개'}), addEventListener:()=>{} };
+  vm.runInNewContext(html.slice(start,end)+'\nrenderDay();', {
+    cal:{sel:'2026-10-01'}, Date,
+    dayItems:()=>[{t:'ev',id:'memo-event'}],
+    events:[{id:'memo-event',title:'방문 일정',tag:'매물소개',memo:'도어록 비밀번호를 확인해 주세요.'}],
+    esc:String, EVENT_TAGS:['계약','입주','매물소개','퇴실'],
+    $:s=>({ '#dayPanel':dayPanel, '#evForm':form, '#ev_title':{}, '#ev_memo':{}, '#ev_time':{} }[s]),
+    saveEvents:async()=>true, renderCal:()=>{}, toast:()=>{}, uid:()=>'', openDetail:()=>{}, setTimeout:()=>1,
+  });
+  assert.match(dayPanel.innerHTML, /<label[^>]*for="ev_memo"[^>]*>메모<\/label>\s*<textarea id="ev_memo"/);
+  assert.match(dayPanel.innerHTML, /class="event-memo"[^>]*>도어록 비밀번호를 확인해 주세요\.<\/div>/);
+  assert.match(html, /\.evform textarea\{min-height:120px;[^}]*font-size:16px;[^}]*line-height:1\.6/);
+  assert.match(html, /\.event-memo\{[^}]*font-size:16px;[^}]*line-height:1\.6/);
+});
+
 test('calendar saves selected contract, move-in and showing tags', async () => {
   const start = html.indexOf('function renderDay(){');
   const end = html.indexOf("$('#calPrev')", start);

@@ -8,10 +8,11 @@
 <meta name="description" content="공인중개사 1인용 매물 관리 대시보드. 흩어져 있던 매물을 한 곳에서 검색하고 관리하세요.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="qwerty">
+<meta property="og:url" content="https://qwerty-gilt-rho.vercel.app/">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:title" content="qwerty">
 <meta property="og:description" content="공인중개사 1인용 매물 관리 대시보드. 흩어져 있던 매물을 한 곳에서 검색하고 관리하세요.">
-<meta property="og:image" content="assets/qwerty-og.png">
+<meta property="og:image" content="https://qwerty-gilt-rho.vercel.app/assets/qwerty-og.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -19,7 +20,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="qwerty">
 <meta name="twitter:description" content="공인중개사 1인용 매물 관리 대시보드. 흩어져 있던 매물을 한 곳에서 검색하고 관리하세요.">
-<meta name="twitter:image" content="assets/qwerty-og.png">
+<meta name="twitter:image" content="https://qwerty-gilt-rho.vercel.app/assets/qwerty-og.png">
 <link rel="icon" type="image/svg+xml" href="assets/qwerty-icon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
@@ -298,14 +299,15 @@ i.ev{background:var(--accent)} i.mo{background:var(--warn)} i.ex{background:var(
 .dpi.ex .kind{background:var(--caution-bg);color:var(--caution)}
 button.dpi.ex:hover{border-color:var(--muted)}
 .dpi.ev .kind{background:var(--accent);color:var(--accent-fg)}
-.dpi .txt{flex:1;min-width:0;overflow-wrap:anywhere}
-.dpi .txt small{display:block;color:var(--muted);white-space:pre-wrap}
+.dpi .txt{display:block;min-width:0;overflow-wrap:anywhere}
+.dpi .event-content{flex:1;min-width:0}
+.event-memo{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:16px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 .dpi .x{border:0;background:transparent;color:var(--muted);padding:0 4px;font-size:12px;white-space:nowrap}
 .dpi .x.armed{color:var(--warn);font-weight:600}
 button.dpi.mo:hover{border-color:var(--muted)}
 .evform{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
 .evform input,.evform textarea{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
-.evform textarea{min-height:56px;resize:vertical}
+.evform textarea{min-height:120px;resize:vertical;font-size:16px;line-height:1.6}
 .evform .row{flex-wrap:nowrap}
 .evform .row input{flex:1}
 
@@ -1100,12 +1102,13 @@ function renderDay(){
     <div class="dplist">${its.length ? its.map(x => {
       if (x.t==='mo' || x.t==='ex') return `<button type="button" class="dpi ${x.t}" data-lid="${x.id}"><span class="kind">${x.t==='mo'?'퇴실':'만기'}</span><span class="txt">${esc(x.label.replace(/^(퇴실|만기) /,''))}<small>매물 상세 보기 ›</small></span></button>`;
       const e = events.find(v=>v.id===x.id);
-      return `<div class="dpi ev"><span class="kind">${e.time?esc(e.time):'종일'}</span><span class="txt">${e.tag?`<span class="tag event-tag event-${esc(e.tag)}">${esc(e.tag)}</span> `:''}${esc(e.title)}${e.memo?`<small>${esc(e.memo)}</small>`:''}</span><button type="button" class="x" data-del="${e.id}">삭제</button></div>`;
+      return `<div class="dpi ev"><span class="kind">${e.time?esc(e.time):'종일'}</span><div class="event-content"><span class="txt">${e.tag?`<span class="tag event-tag event-${esc(e.tag)}">${esc(e.tag)}</span> `:''}${esc(e.title)}</span>${e.memo?`<div class="event-memo">${esc(e.memo)}</div>`:''}</div><button type="button" class="x" data-del="${e.id}">삭제</button></div>`;
     }).join('') : '<p class="muted" style="margin:0">일정이 없어요</p>'}</div>
     <form class="evform" id="evForm">
       <fieldset style="border:0;padding:0;margin:0"><legend class="lab">일정 태그</legend><div class="pick">${EVENT_TAGS.map((tag,i)=>`<input type="radio" name="eventTag" id="eventTag${i}" value="${tag}" ${tag==='매물소개'?'checked':''}><label class="event-${tag}" for="eventTag${i}">${tag}</label>`).join('')}</div></fieldset>
       <input id="ev_title" placeholder="일정 추가 (예: 블루버드 302호 손님 방문)" autocomplete="off">
-      <textarea id="ev_memo" placeholder="메모 (선택)"></textarea>
+      <label class="lab" for="ev_memo">메모</label>
+      <textarea id="ev_memo" placeholder="일정에 남길 내용을 입력하세요 (선택)"></textarea>
       <div class="row"><input id="ev_time" type="time" aria-label="시간"><button class="btn primary" type="submit">추가</button></div>
     </form>`;
   $('#dayPanel').querySelectorAll('[data-lid]').forEach(b => b.addEventListener('click', () => openDetail(b.dataset.lid)));
