@@ -303,7 +303,8 @@ button.dpi.ex:hover{border-color:var(--muted)}
 .dpi.ev .kind{background:var(--accent);color:var(--accent-fg)}
 .dpi .txt{display:block;min-width:0;overflow-wrap:anywhere}
 .dpi .event-content{flex:1;min-width:0}
-.event-memo{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:16px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.event-memo{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:16px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;width:100%;border-left:0;border-right:0;border-bottom:0;background:transparent;color:var(--fg);cursor:pointer}.event-memo:hover{color:var(--accent)}
+.memo-popup{width:min(560px,calc(100vw - 32px));max-height:min(620px,calc(100vh - 48px));background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column}.memo-popup header{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}.memo-popup header h2{font-size:18px;margin:0;flex:1}.memo-popup .memo-popup-body{padding:20px 18px;overflow:auto;font-size:18px;line-height:1.75;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--fg)}
 .dpi .x{border:0;background:transparent;color:var(--muted);padding:0 4px;font-size:12px;white-space:nowrap}
 .dpi .x.armed{color:var(--warn);font-weight:600}
 button.dpi.mo:hover{border-color:var(--muted)}
@@ -1133,13 +1134,20 @@ function renderCal(){
   }));
   renderDay();
 }
+function openEventMemo(id){
+  const e=events.find(v=>v.id===id); if(!e?.memo) return;
+  $('#overlay').innerHTML=`<div class="scrim center" id="memoScrim"><article class="memo-popup" role="dialog" aria-modal="true" aria-label="일정 메모"><header><h2>${esc(e.title)}</h2><button class="btn ghost" type="button" id="memoPopupClose" aria-label="메모 닫기">✕</button></header><div class="memo-popup-body">${esc(e.memo)}</div></article></div>`;
+  $('#memoPopupClose').addEventListener('click',closeOverlay);
+  $('#memoScrim').addEventListener('click',e=>{if(e.target.id==='memoScrim')closeOverlay()});
+  document.addEventListener('keydown',escClose);
+}
 function renderDay(){
   const ds = cal.sel, d = new Date(ds+'T00:00:00'), its = dayItems(ds);
   $('#dayPanel').innerHTML = `<h3>${d.getMonth()+1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})</h3>
     <div class="dplist">${its.length ? its.map(x => {
       if (x.t==='mo' || x.t==='ex') return `<button type="button" class="dpi ${x.t}" data-lid="${x.id}"><span class="kind">${x.t==='mo'?'퇴실':'만기'}</span><span class="txt">${esc(x.label.replace(/^(퇴실|만기) /,''))}<small>매물 상세 보기 ›</small></span></button>`;
       const e = events.find(v=>v.id===x.id);
-      return `<div class="dpi ev"><span class="kind">${e.time?esc(e.time):'종일'}</span><div class="event-content"><span class="txt">${e.tag?`<span class="tag event-tag event-${esc(e.tag)}">${esc(e.tag)}</span> `:''}${esc(e.title)}</span>${e.memo?`<div class="event-memo">${esc(e.memo)}</div>`:''}</div><button type="button" class="x" data-del="${e.id}" data-admin-only>삭제</button></div>`;
+      return `<div class="dpi ev"><span class="kind">${e.time?esc(e.time):'종일'}</span><div class="event-content"><span class="txt">${e.tag?`<span class="tag event-tag event-${esc(e.tag)}">${esc(e.tag)}</span> `:''}${esc(e.title)}</span>${e.memo?`<button type="button" class="event-memo" data-memo-id="${e.id}" aria-label="${esc(e.title)} 메모 크게 보기">${esc(e.memo)}</button>`:''}</div><button type="button" class="x" data-del="${e.id}" data-admin-only>삭제</button></div>`;
     }).join('') : '<p class="muted" style="margin:0">일정이 없어요</p>'}</div>
     <form class="evform" id="evForm" data-admin-only>
       <fieldset style="border:0;padding:0;margin:0"><legend class="lab">일정 태그</legend><div class="pick">${EVENT_TAGS.map((tag,i)=>`<input type="radio" name="eventTag" id="eventTag${i}" value="${tag}" ${tag==='매물소개'?'checked':''}><label class="event-${tag}" for="eventTag${i}">${tag}</label>`).join('')}</div></fieldset>
@@ -1149,6 +1157,7 @@ function renderDay(){
       <div class="row"><input id="ev_time" type="time" aria-label="시간"><button class="btn primary" type="submit">추가</button></div>
     </form>`;
   $('#dayPanel').querySelectorAll('[data-lid]').forEach(b => b.addEventListener('click', () => openDetail(b.dataset.lid)));
+  $('#dayPanel').querySelectorAll('[data-memo-id]').forEach(b => b.addEventListener('click', () => openEventMemo(b.dataset.memoId)));
   $('#dayPanel').querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
     if (!b.classList.contains('armed')){ b.classList.add('armed'); b.textContent='정말 삭제'; setTimeout(()=>{b.classList.remove('armed'); b.textContent='삭제';},3000); return; }
     events = events.filter(e=>e.id!==b.dataset.del); await saveEvents(); renderCal(); toast('일정을 삭제했어요');
