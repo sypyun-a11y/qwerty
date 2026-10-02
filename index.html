@@ -56,6 +56,8 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5}
+.auth-gate{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:24px}.auth-card{width:min(100%,360px);text-align:center}.auth-mark{width:48px;height:48px;margin:0 auto 12px;border-radius:12px;background:var(--fg);color:var(--bg);font:600 32px/48px var(--mono)}.auth-card h1{margin:0;font:600 24px var(--mono)}.auth-card p{color:var(--muted);margin:8px 0 20px}.auth-card form{display:flex;gap:8px}.auth-card input{min-width:0;flex:1;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px}.auth-error{color:var(--warn)!important;font-size:13px}.auth-gate[hidden]{display:none!important}
+body:not(.admin-mode) [data-admin-only]{display:none!important}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -350,7 +352,7 @@ button.dpi.mo:hover{border-color:var(--muted)}
 </style>
 </head>
 <body>
-
+<div id="authGate" class="auth-gate"><div class="auth-card"><div class="auth-mark">q</div><h1>qwerty</h1><p>매물 정보를 보려면 비밀번호를 입력하세요.</p><form id="authForm"><input id="authPassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호"><button class="btn primary" type="submit">입장</button><p id="authError" class="auth-error" hidden>비밀번호를 확인하세요.</p></form></div></div>
 <header class="top">
   <div class="wrap">
     <a class="logo" href="#list" aria-label="qwerty 홈"><svg viewBox="228 196 798 822" aria-hidden="true">
@@ -369,7 +371,7 @@ button.dpi.mo:hover{border-color:var(--muted)}
     <div class="grow"></div>
     <div class="theme-switch" role="group" aria-label="화면 모드"><button type="button" data-theme="dark" aria-pressed="true">밤</button><button type="button" data-theme="light" aria-pressed="false">낮</button></div>
     <span class="save" id="saveState">불러오는 중…</span>
-    <button class="btn primary" id="addBtn" type="button">
+    <button class="btn primary" id="addBtn" data-admin-only type="button">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="addtxt">매물 등록</span>
     </button>
   </div>
@@ -429,7 +431,7 @@ button.dpi.mo:hover{border-color:var(--muted)}
     <div class="mlist">
       <div class="mtools">
         <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="memoQ" type="search" placeholder="메모 검색" autocomplete="off"></div>
-        <button class="btn primary" type="button" id="memoNew">새 메모</button>
+        <button class="btn primary" type="button" id="memoNew" data-admin-only>새 메모</button>
       </div>
       <div id="memoList"></div>
     </div>
@@ -454,6 +456,34 @@ const TYPE_ALIAS = {'1룸':'1룸 원룸','1.5룸':'1.5룸 1.5 분리형','2룸':
 const SEED_V = 3;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let sharedRole = 'viewer', sharedVersion = 0, sharedReady = false, sharedBusy = false;
+const adminPath = '?mode=admin';
+const adminRequested = new URLSearchParams(location.search).get('mode') === 'admin';
+async function sharedPush(){
+  if (!sharedReady || sharedRole!=='admin' || sharedBusy) return;
+  sharedBusy=true;
+  try {
+    const r=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:sharedVersion,data:{items,events,memos}})});
+    if(r.ok){ const out=await r.json(); sharedVersion=out.version; }
+    else if(r.status===409) toast('다른 화면에서 먼저 변경했어요. 새로고침 후 확인하세요');
+  } catch(e){ toast('공유 저장에 실패했어요. 이 기기에는 저장됐어요'); }
+  finally{ sharedBusy=false; }
+}
+async function sharedPull(){
+  if(!sharedReady) return;
+  try{ const r=await fetch('/api/state'); if(!r.ok)return; const out=await r.json(); if(out.version!==sharedVersion){ sharedVersion=out.version; items=out.data.items||[]; events=out.data.events||[]; memos=out.data.memos||[]; render(); renderCal(); renderMemo(); } }catch(e){}
+}
+async function authenticate(){
+  const password=$('#authPassword').value;
+  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,role:adminRequested?'admin':'viewer'})});
+  if(!r.ok) throw new Error('auth');
+  const out=await r.json(); sharedRole=out.role; document.body.classList.toggle('admin-mode',sharedRole==='admin');
+  const state=await fetch('/api/state'); if(state.ok){ const out=await state.json(); sharedVersion=out.version; items=out.data.items||[]; events=out.data.events||[]; memos=out.data.memos||[]; sharedReady=true; render(); renderCal(); renderMemo(); }
+  $('#authGate').hidden=true; if(sharedRole==='admin') toast('관리자 모드로 입장했어요');
+}
+$('#authForm').addEventListener('submit',async e=>{e.preventDefault();try{await authenticate()}catch(err){$('#authError').hidden=false;$('#authPassword').select()}});
+setInterval(sharedPull,5000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)sharedPull()});
 
 let items = [];
 const ui = { kind:'전체', type:'', status:'', q:'', sort:'moveout', view:'card' };
@@ -494,7 +524,8 @@ const DB = {
 };
 async function persist(){
   const ok = await DB.set('items', items);
-  $('#saveState').textContent = ok ? '이 기기에 자동 저장됨' : '저장 안 됨 · 새로고침하면 사라져요';
+  $('#saveState').textContent = ok ? (sharedReady ? '공유 저장됨' : '이 기기에 자동 저장됨') : '저장 안 됨 · 새로고침하면 사라져요';
+  await sharedPush();
   if (ui.tab==='cal') renderCal();
 }
 
@@ -877,7 +908,7 @@ function openDetail(id){
       <button class="btn" type="button" id="addUnitBtn" style="margin-top:14px">+ 이 건물에 호실 추가</button>
     </div>
     <textarea class="tplout" id="tplOut" readonly hidden aria-label="매물 양식"></textarea>
-    <footer><button class="btn danger" type="button" id="delBtn">삭제</button><div style="flex:1"></div><button class="btn" type="button" id="tplBtn">양식 복사</button><button class="btn primary" type="button" id="editBtn">수정</button></footer>
+    <footer><button class="btn danger" type="button" id="delBtn" data-admin-only>삭제</button><div style="flex:1"></div><button class="btn" type="button" id="tplBtn">양식 복사</button><button class="btn primary" type="button" id="editBtn" data-admin-only>수정</button></footer>
   </aside></div>`;
   document.addEventListener('keydown', escClose);
   $('#scrim').addEventListener('click', e => { if(e.target.id==='scrim') closeOverlay(); });
@@ -1062,7 +1093,7 @@ $('.logo').addEventListener('click', e => { e.preventDefault(); setTab('list'); 
 /* ---------- calendar ---------- */
 let events = [];
 const EVENT_TAGS = ['계약','입주','매물소개','퇴실'];
-const saveEvents = () => DB.set('events', events);
+const saveEvents = async () => { const ok=await DB.set('events', events); await sharedPush(); return ok; };
 const pad = n => String(n).padStart(2,'0');
 const isoOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const todayIso = () => isoOf(new Date());
@@ -1102,9 +1133,9 @@ function renderDay(){
     <div class="dplist">${its.length ? its.map(x => {
       if (x.t==='mo' || x.t==='ex') return `<button type="button" class="dpi ${x.t}" data-lid="${x.id}"><span class="kind">${x.t==='mo'?'퇴실':'만기'}</span><span class="txt">${esc(x.label.replace(/^(퇴실|만기) /,''))}<small>매물 상세 보기 ›</small></span></button>`;
       const e = events.find(v=>v.id===x.id);
-      return `<div class="dpi ev"><span class="kind">${e.time?esc(e.time):'종일'}</span><div class="event-content"><span class="txt">${e.tag?`<span class="tag event-tag event-${esc(e.tag)}">${esc(e.tag)}</span> `:''}${esc(e.title)}</span>${e.memo?`<div class="event-memo">${esc(e.memo)}</div>`:''}</div><button type="button" class="x" data-del="${e.id}">삭제</button></div>`;
+      return `<div class="dpi ev"><span class="kind">${e.time?esc(e.time):'종일'}</span><div class="event-content"><span class="txt">${e.tag?`<span class="tag event-tag event-${esc(e.tag)}">${esc(e.tag)}</span> `:''}${esc(e.title)}</span>${e.memo?`<div class="event-memo">${esc(e.memo)}</div>`:''}</div><button type="button" class="x" data-del="${e.id}" data-admin-only>삭제</button></div>`;
     }).join('') : '<p class="muted" style="margin:0">일정이 없어요</p>'}</div>
-    <form class="evform" id="evForm">
+    <form class="evform" id="evForm" data-admin-only>
       <fieldset style="border:0;padding:0;margin:0"><legend class="lab">일정 태그</legend><div class="pick">${EVENT_TAGS.map((tag,i)=>`<input type="radio" name="eventTag" id="eventTag${i}" value="${tag}" ${tag==='매물소개'?'checked':''}><label class="event-${tag}" for="eventTag${i}">${tag}</label>`).join('')}</div></fieldset>
       <input id="ev_title" placeholder="일정 추가 (예: 블루버드 302호 손님 방문)" autocomplete="off">
       <label class="lab" for="ev_memo">메모</label>
@@ -1137,6 +1168,7 @@ const saveMemos = () => {
   try { localStorage.setItem('qwerty_memos_pending', snapshot); } catch(e){}
   return DB.set('memos', memos).then(ok => {
     try { if (ok && localStorage.getItem('qwerty_memos_pending')===snapshot) localStorage.removeItem('qwerty_memos_pending'); } catch(e){}
+    sharedPush();
     return ok;
   });
 };
@@ -1175,9 +1207,9 @@ function renderMemo(){
       <button class="btn ghost back" type="button" id="memoBack">‹ 목록</button>
       <span class="muted" id="memoSaved" style="font-size:12px">${m.sample?'예시 메모 · ':''}자동 저장됨</span>
       <div style="flex:1"></div>
-      <button class="btn" type="button" id="memoPin">${m.pinned?'고정 해제':'상단 고정'}</button>
-      <button class="btn danger" type="button" id="memoDel">삭제</button></div>
-    <textarea id="memoBody" placeholder="첫 줄이 제목이 돼요" aria-label="메모 내용">${esc(m.body)}</textarea>`;
+      <button class="btn" type="button" id="memoPin" data-admin-only>${m.pinned?'고정 해제':'상단 고정'}</button>
+      <button class="btn danger" type="button" id="memoDel" data-admin-only>삭제</button></div>
+    <textarea id="memoBody" placeholder="첫 줄이 제목이 돼요" aria-label="메모 내용" ${sharedRole==='admin'?'':'readonly'}>${esc(m.body)}</textarea>`;
   $('#memoBody').addEventListener('input', e => {
     m.body = e.target.value; m.updatedAt = Date.now(); delete m.sample;
     $('#memoSaved').textContent = '저장 중…';
