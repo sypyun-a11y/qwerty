@@ -478,7 +478,13 @@ async function authenticate(){
   const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password,role:adminRequested?'admin':'viewer'})});
   if(!r.ok) throw new Error('auth');
   const out=await r.json(); sharedRole=out.role; document.body.classList.toggle('admin-mode',sharedRole==='admin');
-  const state=await fetch('/api/state'); if(state.ok){ const out=await state.json(); sharedVersion=out.version; items=out.data.items||[]; events=out.data.events||[]; memos=out.data.memos||[]; sharedReady=true; render(); renderCal(); renderMemo(); }
+  const localSnapshot={items:[...items],events:[...events],memos:[...memos]};
+  const state=await fetch('/api/state'); if(state.ok){ let remote=await state.json();
+    if(sharedRole==='admin' && remote.version===0 && (localSnapshot.items.length||localSnapshot.events.length||localSnapshot.memos.length)){
+      const migrated=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:0,data:localSnapshot})});
+      if(migrated.ok) remote=await migrated.json();
+    }
+    sharedVersion=remote.version; items=remote.data.items||[]; events=remote.data.events||[]; memos=remote.data.memos||[]; sharedReady=true; render(); renderCal(); renderMemo(); }
   $('#authGate').hidden=true; if(sharedRole==='admin') toast('관리자 모드로 입장했어요');
 }
 $('#authForm').addEventListener('submit',async e=>{e.preventDefault();try{await authenticate()}catch(err){$('#authError').hidden=false;$('#authPassword').select()}});
